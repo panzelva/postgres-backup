@@ -1,6 +1,5 @@
 FROM node:14-slim AS builder
-
-ENV NODE_ENV production
+ENV NODE_ENV development
 WORKDIR /srv
 
 COPY ["package.json", "yarn.lock", "./"] 
@@ -12,6 +11,7 @@ RUN yarn build
 # =======================================================
 
 FROM node:14-slim
+ENV NODE_ENV production
 WORKDIR /srv
 
 COPY ["package.json", "yarn.lock", "./"] 
