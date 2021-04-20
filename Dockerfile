@@ -1,34 +1,26 @@
-FROM python:3.8-slim as base
+FROM node:14-slim AS builder
 
-# Setup env
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONFAULTHANDLER 1
+ENV NODE_ENV production
+WORKDIR /srv
 
-FROM base AS python-deps
+COPY ["package.json", "yarn.lock", "./"] 
+RUN yarn install --non-interactive --frozen-lockfile
 
-# Install pipenv and compilation dependencies
-RUN pip install pipenv
-RUN apt-get update && apt-get install -y --no-install-recommends gcc
+COPY [".", "./"]
+RUN yarn build
 
-# Install python dependencies in /.venv
-COPY Pipfile .
-COPY Pipfile.lock .
-RUN PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy
+# =======================================================
 
-FROM base AS runtime
+FROM node:14-slim
+WORKDIR /srv
 
-# Copy virtual env from python-deps stage
-COPY --from=python-deps /.venv /.venv
-ENV PATH="/.venv/bin:$PATH"
+COPY ["package.json", "yarn.lock", "./"] 
+COPY --from=builder ["/srv/dist", "./"]
 
-# Create and switch to a new user
-RUN useradd --create-home appuser
-WORKDIR /home/appuser
-USER appuser
+RUN mkdir -p /usr/share/man/man1 && \
+  mkdir -p /usr/share/man/man7 && \
+  apt-get update && \
+  apt-get install -y postgresql-client && \
+  yarn install --non-interactive --frozen-lockfile --production
 
-# Install application into container
-COPY . .
-
-CMD ["python", "src/main.py"]
+CMD ["node", "app.js"]
