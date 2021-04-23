@@ -1,7 +1,7 @@
+import env from "./env"
 import { checkBucketForPermission, uploadDumpToBucket } from "./google"
+import { logger } from "./logger"
 import { checkPgDumpVersion, cleanUpWorkDir, createWorkDir, dumpDatabase } from "./postgres"
-import env from "./utils/env"
-import { logger } from "./utils/logger"
 
 async function run() {
   logger.info("Starting postgres to gcp bucket backup utility.")
@@ -17,7 +17,7 @@ async function run() {
   logger.info(`Database: ${env.PG_DATABASE}`)
   logger.info(`Host: ${env.PG_HOST}`)
   logger.info(`Port: ${env.PG_PORT}`)
-  logger.info(`Username: ${env.PG_USERNAME}`)
+  logger.info(`Username: ${env.PG_USER}`)
   logger.info("==============================================")
 
   await checkBucketForPermission()

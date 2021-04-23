@@ -13,8 +13,8 @@ const env = cleanEnv(process.env, {
   WORK_DIR: str({ default: path.join(os.tmpdir(), "dump") }),
 
   PG_DATABASE: str({ devDefault: "postgres" }),
-  PG_USERNAME: str({ devDefault: "postgres" }),
   PG_PASSWORD: str({ devDefault: "postgres" }),
+  PG_USER: str({ devDefault: "postgres" }),
   PG_HOST: str({ devDefault: "localhost" }),
   PG_PORT: port({ default: 5432 }),
 

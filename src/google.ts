@@ -1,9 +1,9 @@
 import { Storage } from "@google-cloud/storage"
-import env from "./utils/env"
-import { logger } from "./utils/logger"
 import { format } from "date-fns"
 import { readdir } from "fs/promises"
 import path from "path"
+import env from "./env"
+import { logger } from "./logger"
 
 function base64Decode(encoded: string) {
   return Buffer.from(encoded, "base64").toString("ascii")

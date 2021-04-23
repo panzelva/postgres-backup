@@ -1,7 +1,7 @@
 import { spawn } from "child_process"
 import { mkdir, readdir, rm } from "fs/promises"
-import env from "./utils/env"
-import { logger } from "./utils/logger"
+import env from "./env"
+import { logger } from "./logger"
 
 async function isDirEmpty(dir: string) {
   const files = await readdir(dir)
@@ -75,7 +75,7 @@ export async function dumpDatabase() {
         `--port`,
         `${env.PG_PORT}`,
         `--username`,
-        env.PG_USERNAME,
+        env.PG_USER,
         `--dbname`,
         env.PG_DATABASE,
       ],
