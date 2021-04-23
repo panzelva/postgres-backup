@@ -20,7 +20,11 @@ COPY --from=builder ["/srv/dist", "./"]
 RUN mkdir -p /usr/share/man/man1 && \
   mkdir -p /usr/share/man/man7 && \
   apt-get update && \
-  apt-get install -y postgresql-client && \
+  apt-get install -y gnupg2 wget lsb-release && \
+  wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+  echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+  apt-get update && \
+  apt-get install -y postgresql-client-12 && \
   yarn install --non-interactive --frozen-lockfile --production
 
 CMD ["node", "app.js"]
