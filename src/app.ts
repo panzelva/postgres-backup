@@ -1,35 +1,88 @@
-import env from "./env"
-import { checkBucketForPermission, uploadDumpToBucket } from "./google"
-import { logger } from "./logger"
-import { checkPgDumpVersion, cleanUpWorkDir, createWorkDir, dumpDatabase } from "./postgres"
+import { mkdir, rm } from "fs/promises"
+import got from "got"
+import { checkPgDumpVersion, dumpDatabase } from "./database/postgres"
+import { StorageClient, StorageDriver } from "./storage/base"
+import { GoogleStorageClient } from "./storage/google"
+import { S3StorageClient } from "./storage/s3"
+import { isDirEmpty, notNullOrThrow } from "./utils/common"
+import { env } from "./utils/env"
+import { logger } from "./utils/logger"
 
-async function run() {
-  logger.info("Starting postgres to gcp bucket backup utility.")
-  logger.info("==============================================")
-  logger.info("Current configuration")
-  logger.info(`Work dir: ${env.WORK_DIR}`)
-  logger.info("==============================================")
-  logger.info("Google cloud")
-  logger.info(`Bucket name: ${env.GCP_BUCKET_NAME}`)
-  logger.info(`Backup folder in bucket: ${env.GCP_FOLDER}`)
-  logger.info("==============================================")
-  logger.info("Postgres")
-  logger.info(`Database: ${env.PG_DATABASE}`)
-  logger.info(`Host: ${env.PG_HOST}`)
-  logger.info(`Port: ${env.PG_PORT}`)
-  logger.info(`Username: ${env.PG_USER}`)
-  logger.info("==============================================")
+async function createWorkDir() {
+  logger.info(`Checking if ${env.WORK_DIR} is suitable for backup.`)
+  await mkdir(env.WORK_DIR, { recursive: true })
 
-  await checkBucketForPermission()
-  await checkPgDumpVersion()
-  await createWorkDir()
-
-  await dumpDatabase()
-  await uploadDumpToBucket()
-  await cleanUpWorkDir()
+  const isEmpty = await isDirEmpty(env.WORK_DIR)
+  if (!isEmpty) {
+    logger.error(`${env.WORK_DIR} is not empty, aborting!`)
+    throw new Error("Work dir is not empty.")
+  }
 }
 
-run().catch((error) => {
-  console.error(error)
-  process.exit(1)
-})
+async function cleanUpWorkDir() {
+  logger.info(`Deleting ${env.WORK_DIR}`)
+  await rm(env.WORK_DIR, { recursive: true, force: true })
+}
+
+async function hearthbeatRequest() {
+  const url = env.HEARTHBEAT_URL
+  if (!url) {
+    return
+  }
+
+  logger.info(`Making hearthbeat request to '${url}'`)
+  await got.get(url)
+}
+
+function createStorageClient(): StorageClient {
+  if (env.STORAGE_DRIVER === StorageDriver.Google) {
+    return new GoogleStorageClient({
+      bucketName: notNullOrThrow(env.GCP_BUCKET_NAME),
+      privateKey: notNullOrThrow(env.GCP_SA_PRIVATE_KEY),
+      bucketRootFolder: env.STORAGE_ROOT_FOLDER,
+      clientEmail: env.GCP_SA_CLIENT_EMAIL,
+    })
+  }
+
+  if (env.STORAGE_DRIVER === StorageDriver.S3) {
+    return new S3StorageClient({
+      accessKey: notNullOrThrow(env.S3_ACCESS_KEY),
+      secretKey: notNullOrThrow(env.S3_SECRET_KEY),
+      endpoint: notNullOrThrow(env.S3_HOST),
+      region: env.S3_REGION,
+      port: env.S3_PORT,
+      ssl: env.S3_SSL,
+      bucketName: notNullOrThrow(env.S3_BUCKET_NAME),
+      bucketRootFolder: env.STORAGE_ROOT_FOLDER,
+    })
+  }
+
+  throw new Error(`Invalid storage driver '${env.STORAGE_DRIVER}'`)
+}
+
+async function run() {
+  logger.info(`Starting postgres backup utility.`)
+  logger.info(`Using storage driver '${env.STORAGE_DRIVER}'`)
+
+  await checkPgDumpVersion()
+
+  const storageClient = createStorageClient()
+  await storageClient.checkUploadPermissions()
+
+  await createWorkDir()
+  await dumpDatabase(env.WORK_DIR)
+
+  await storageClient.uploadFolderContents(env.WORK_DIR)
+  await cleanUpWorkDir()
+
+  await hearthbeatRequest()
+}
+
+if (require.main === module) {
+  // exit node process on unhandled promise rejections
+  process.on("unhandledRejection", (error) => {
+    throw error
+  })
+
+  run()
+}
