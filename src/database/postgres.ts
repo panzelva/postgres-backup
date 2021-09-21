@@ -23,7 +23,12 @@ export async function checkPgDumpVersion() {
     process.stdout.on("data", processData)
     process.stderr.on("data", processData)
 
-    process.on("close", function () {
+    process.on("close", function (code) {
+      if (code !== 0) {
+        reject("pg_dump returned non-zero code.")
+        return
+      }
+
       logger.info("pg_dump --version finished successfully.")
       resolve()
     })
@@ -63,7 +68,12 @@ export async function dumpDatabase(targetFolder: string) {
     process.stdout.on("data", processData)
     process.stderr.on("data", processData)
 
-    process.on("close", function () {
+    process.on("close", function (code) {
+      if (code !== 0) {
+        reject("pg_dump returned non-zero code.")
+        return
+      }
+
       logger.info("pg_dump finished successfully.")
       resolve()
     })

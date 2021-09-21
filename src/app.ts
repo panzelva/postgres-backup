@@ -60,7 +60,7 @@ function createStorageClient(): StorageClient {
   throw new Error(`Invalid storage driver '${env.STORAGE_DRIVER}'`)
 }
 
-async function run() {
+async function main() {
   logger.info(`Starting postgres backup utility.`)
   logger.info(`Using storage driver '${env.STORAGE_DRIVER}'`)
 
@@ -84,5 +84,8 @@ if (require.main === module) {
     throw error
   })
 
-  run()
+  main().catch((err) => {
+    logger.error(err)
+    process.exit(1)
+  })
 }

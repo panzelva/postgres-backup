@@ -19,7 +19,7 @@ function getEnv() {
     PG_PORT: port({ default: 5432 }),
 
     STORAGE_DRIVER: str({ default: StorageDriver.Google, choices: [StorageDriver.Google, StorageDriver.S3] }),
-    STORAGE_ROOT_FOLDER: str({ default: "pgbackup" }),
+    STORAGE_ROOT_FOLDER: str({ default: undefined }),
     HEARTHBEAT_URL: url({ default: undefined }),
   })
 
